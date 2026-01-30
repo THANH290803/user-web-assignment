@@ -25,7 +25,7 @@ export default function Hero() {
           </div>
           <div className="relative">
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8">
-              <Image src="/macbook-pro-laptop.png" alt="MacBook Pro" fill className="w-full h-auto rounded-lg shadow-2xl" />
+              <Image src="/macbook-pro-laptop.png" alt="MacBook Pro" width={500} height={100} className="w-full h-auto rounded-lg shadow-2xl" />
             </div>
           </div>
         </div>

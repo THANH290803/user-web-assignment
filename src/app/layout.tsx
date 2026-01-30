@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { CartProvider } from "@/contexts/cart-context"
 import { AuthProvider } from "@/contexts/auth-context"
+import { Toaster } from "react-hot-toast"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -24,7 +25,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <Suspense fallback={null}>
           <AuthProvider>
-            <CartProvider>{children}</CartProvider>
+            <CartProvider>
+              {children}
+              <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
+            </CartProvider>
           </AuthProvider>
         </Suspense>
       </body>

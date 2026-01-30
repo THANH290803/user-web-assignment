@@ -1,0 +1,66 @@
+{
+  "HaNoi": [
+    {
+      "district": "Ba Đình",
+      "wards": [
+        "Phúc Xá",
+        "Trúc Bạch",
+        "Vĩnh Phúc",
+        "Cống Vị",
+        "Liễu Giai"
+      ]
+    },
+    {
+      "district": "Hoàn Kiếm",
+      "wards": [
+        "Chương Dương",
+        "Cửa Đông",
+        "Cửa Nam",
+        "Đồng Xuân",
+        "Hàng Bạc"
+      ]
+    },
+    {
+      "district": "Đống Đa",
+      "wards": [
+        "Cát Linh",
+        "Hàng Bột",
+        "Khâm Thiên",
+        "Láng Hạ",
+        "Láng Thượng"
+      ]
+    }
+  ],
+  "HoChiMinh": [
+    {
+      "district": "Quận 1",
+      "wards": [
+        "Bến Nghé",
+        "Bến Thành",
+        "Cầu Kho",
+        "Cầu Ông Lãnh",
+        "Đa Kao"
+      ]
+    },
+    {
+      "district": "Quận 3",
+      "wards": [
+        "Võ Thị Sáu",
+        "Ward 7",
+        "Ward 8",
+        "Ward 9",
+        "Ward 10"
+      ]
+    },
+    {
+      "district": "Quận Bình Thạnh",
+      "wards": [
+        "Phường 1",
+        "Phường 2",
+        "Phường 3",
+        "Phường 5",
+        "Phường 6"
+      ]
+    }
+  ]
+}

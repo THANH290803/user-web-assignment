@@ -1,7 +1,34 @@
+"use client"
+
+import { useEffect, useState, ReactNode } from "react"
+import axios from "axios"
+
+
+// Type cho FE template
+type CategoryInfo = {
+  description: string
+  icon: ReactNode // ⚡ dùng ReactNode thay cho JSX.Element
+  href: string
+}
+
+// Type cho API trả về
+type ApiCategory = {
+  id: number
+  name: string
+  description?: string | null
+  deletedAt?: string | null
+}
+
+// Kết hợp API + FE template
+type Category = ApiCategory & CategoryInfo
+
 export default function Categories() {
-  const categories = [
-    {
-      name: "Laptop",
+  const [categories, setCategories] = useState<Category[]>([])
+
+  // ⚡ FIX JSX gạch đỏ bằng ReactNode
+  const categoryTemplate: Record<string, CategoryInfo> = {
+    Laptop: {
+      description: "Gaming, văn phòng, đồ họa",
       icon: (
         <div className="bg-blue-500 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
           <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -12,10 +39,9 @@ export default function Categories() {
         </div>
       ),
       href: "/laptops",
-      description: "Gaming, văn phòng, đồ họa",
     },
-    {
-      name: "Điện thoại",
+    "Điện thoại": {
+      description: "iPhone, Samsung, Xiaomi",
       icon: (
         <div className="bg-purple-500 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
           <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -25,10 +51,9 @@ export default function Categories() {
         </div>
       ),
       href: "/phones",
-      description: "iPhone, Samsung, Xiaomi",
     },
-    {
-      name: "Phụ kiện",
+    "Phụ kiện": {
+      description: "Tai nghe, chuột, bàn phím",
       icon: (
         <div className="bg-green-500 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
           <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,10 +66,9 @@ export default function Categories() {
         </div>
       ),
       href: "/accessories",
-      description: "Tai nghe, chuột, bàn phím",
     },
-    {
-      name: "Đồng hồ thông minh",
+    "Đồng hồ thông minh": {
+      description: "Apple Watch, Samsung Galaxy",
       icon: (
         <div className="bg-orange-500 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
           <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,9 +78,28 @@ export default function Categories() {
         </div>
       ),
       href: "/watches",
-      description: "Apple Watch, Samsung Galaxy",
     },
-  ]
+  }
+
+  useEffect(() => {
+    axios
+      .get<ApiCategory[]>("http://localhost:8080/api/categories")
+      .then((res) => {
+        const apiData = res.data || []
+
+        const merged: Category[] = apiData
+          .filter((c) => categoryTemplate[c.name])
+          .map((c) => ({
+            ...c,
+            ...categoryTemplate[c.name],
+          }))
+
+        setCategories(merged)
+      })
+      .catch((err) => {
+        console.error("Error fetching categories:", err)
+      })
+  }, [])
 
   return (
     <section className="py-16 bg-gray-50">

@@ -5,11 +5,18 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { useCart } from "@/contexts/cart-context"
 import Link from "next/link"
+import { useEffect, useState } from "react"
+import { ShoppingCart } from "lucide-react"
 
 export function CartContent() {
-  const { state, dispatch } = useCart()
+  const [cart, setCart] = useState<any[]>([])
+
+  useEffect(() => {
+    const storedCart = JSON.parse(localStorage.getItem("cart") || "[]")
+    setCart(storedCart)
+  }, [])
+
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -18,23 +25,38 @@ export function CartContent() {
     }).format(price)
   }
 
-  const updateQuantity = (id: number, quantity: number) => {
-    dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } })
+  const updateQuantity = (configId: number, newQuantity: number) => {
+    const updated = cart.map((item) =>
+      item.configId === configId ? { ...item, quantity: newQuantity } : item
+    )
+
+    setCart(updated)
+    localStorage.setItem("cart", JSON.stringify(updated))
   }
 
-  const removeItem = (id: number) => {
-    dispatch({ type: "REMOVE_ITEM", payload: id })
+  const removeItem = (configId: number) => {
+    const updated = cart.filter((item) => item.configId !== configId)
+    setCart(updated)
+    localStorage.setItem("cart", JSON.stringify(updated))
   }
 
   const clearCart = () => {
-    dispatch({ type: "CLEAR_CART" })
+    setCart([])
+    localStorage.setItem("cart", "[]")
   }
 
-  if (state.items.length === 0) {
+  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
+
+  if (cart.length === 0) {
     return (
       <div className="max-w-2xl mx-auto text-center py-16">
         <div className="mb-8">
-          <div className="text-6xl mb-4">□</div> {/* replaced cart emoji with simple square */}
+          <div className="flex justify-center mb-4">
+            <ShoppingCart size={64} />
+          </div>
           <h1 className="text-3xl font-bold mb-4">Giỏ hàng trống</h1>
           <p className="text-muted-foreground text-lg mb-8">
             Bạn chưa có sản phẩm nào trong giỏ hàng. Hãy khám phá các sản phẩm tuyệt vời của chúng tôi!
@@ -56,9 +78,9 @@ export function CartContent() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Giỏ hàng của bạn</h1>
-            <p className="text-muted-foreground">Bạn có {state.itemCount} sản phẩm trong giỏ hàng</p>
+            <p className="text-muted-foreground">Bạn có {itemCount} sản phẩm trong giỏ hàng</p>
           </div>
-          {state.items.length > 0 && (
+          {cart.length > 0 && (
             <Button
               variant="outline"
               onClick={clearCart}
@@ -73,8 +95,8 @@ export function CartContent() {
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
-          {state.items.map((item) => (
-            <Card key={item.id} className="overflow-hidden">
+          {cart.map((item, index) => (
+            <Card key={`${item.productId}-${item.configId}-${index}`} className="overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex gap-4">
                   <div className="relative w-24 h-24 flex-shrink-0">
@@ -95,19 +117,17 @@ export function CartContent() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.configId)}
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
-                        × {/* replaced trash emoji with simple × symbol */}
+                        ×
                       </Button>
                     </div>
 
                     <div className="flex flex-wrap gap-1">
-                      {item.specifications.slice(0, 3).map((spec, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {spec}
-                        </Badge>
-                      ))}
+                      <Badge variant="secondary" className="text-xs">
+                        {item.configName}
+                      </Badge>
                     </div>
 
                     <div className="flex items-center justify-between pt-2">
@@ -116,7 +136,7 @@ export function CartContent() {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 bg-transparent"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.configId, item.quantity - 1)}
                           disabled={item.quantity <= 1}
                         >
                           − {/* kept simple minus symbol */}
@@ -126,7 +146,7 @@ export function CartContent() {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 bg-transparent"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.configId, item.quantity + 1)}
                         >
                           + {/* kept simple plus symbol */}
                         </Button>
@@ -153,8 +173,8 @@ export function CartContent() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span>Tạm tính ({state.itemCount} sản phẩm)</span>
-                  <span>{formatPrice(state.total)}</span>
+                  <span>Tạm tính ({itemCount} sản phẩm)</span>
+                  <span>{formatPrice(total)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Phí vận chuyển</span>
@@ -162,7 +182,7 @@ export function CartContent() {
                 </div>
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Thuế VAT</span>
-                  <span>{formatPrice(state.total * 0.1)}</span>
+                  <span>{formatPrice(total * 0.1)}</span>
                 </div>
               </div>
 
@@ -170,7 +190,7 @@ export function CartContent() {
 
               <div className="flex justify-between text-lg font-bold">
                 <span>Tổng cộng</span>
-                <span className="text-primary">{formatPrice(state.total * 1.1)}</span>
+                <span className="text-primary">{formatPrice(total * 1.1)}</span>
               </div>
 
               <div className="space-y-3 pt-4">

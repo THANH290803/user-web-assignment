@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -10,50 +8,49 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import toast from "react-hot-toast"
 
 export function RegisterForm() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [phone, setPhone] = useState("")
+  const [address, setAddress] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [error, setError] = useState("")
   const [acceptTerms, setAcceptTerms] = useState(false)
+
   const { register, state } = useAuth()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
 
     if (!name || !email || !password || !confirmPassword) {
-      setError("Vui lòng nhập đầy đủ thông tin")
+      toast.error("Vui lòng nhập đầy đủ thông tin")
       return
     }
 
     if (password !== confirmPassword) {
-      setError("Mật khẩu xác nhận không khớp")
+      toast.error("Mật khẩu xác nhận không khớp")
       return
     }
 
     if (password.length < 6) {
-      setError("Mật khẩu phải có ít nhất 6 ký tự")
+      toast.error("Mật khẩu phải có ít nhất 6 ký tự")
       return
     }
 
     if (!acceptTerms) {
-      setError("Vui lòng đồng ý với điều khoản sử dụng")
+      toast.error("Vui lòng đồng ý với điều khoản sử dụng")
       return
     }
 
-    const success = await register(name, email, password)
+    const success = await register(name, email, password, phone, address)
     if (success) {
       router.push("/")
-    } else {
-      setError("Đăng ký thất bại. Vui lòng thử lại.")
     }
   }
 
@@ -61,7 +58,7 @@ export function RegisterForm() {
     <div className="max-w-md mx-auto">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Đăng ký</h1>
-        <p className="text-muted-foreground">Tạo tài khoản để bắt đầu mua sắm</p>
+        <p className="text-muted-foreground">Tạo tài khoản để trải nghiệm mua sắm</p>
       </div>
 
       <Card>
@@ -70,49 +67,43 @@ export function RegisterForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* Name */}
             <div className="space-y-2">
               <Label htmlFor="name">Họ và tên</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Nguyễn Văn A"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Nguyễn Văn A"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
             </div>
 
+            {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
 
+            {/* Password */}
             <div className="space-y-2">
               <Label htmlFor="password">Mật khẩu</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10"
                   required
                 />
                 <Button
@@ -122,26 +113,21 @@ export function RegisterForm() {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  )}
+                  {showPassword ? "◐" : "○"}
                 </Button>
               </div>
             </div>
 
+            {/* Confirm Password */}
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10 pr-10"
                   required
                 />
                 <Button
@@ -151,15 +137,36 @@ export function RegisterForm() {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  )}
+                  {showConfirmPassword ? "◐" : "○"}
                 </Button>
               </div>
             </div>
 
+            {/* Phone */}
+            <div className="space-y-2">
+              <Label htmlFor="phone">Số điện thoại</Label>
+              <Input
+                id="phone"
+                type="text"
+                placeholder="0123456789"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+
+            {/* Address */}
+            <div className="space-y-2">
+              <Label htmlFor="address">Địa chỉ</Label>
+              <Input
+                id="address"
+                type="text"
+                placeholder="Địa chỉ của bạn"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+              />
+            </div>
+
+            {/* Terms */}
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -180,21 +187,12 @@ export function RegisterForm() {
               </Label>
             </div>
 
-            {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</div>}
-
             <Button
               type="submit"
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               disabled={state.isLoading}
             >
-              {state.isLoading ? (
-                "Đang đăng ký..."
-              ) : (
-                <>
-                  Đăng ký
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
+              {state.isLoading ? "Đang đăng ký..." : "Đăng ký →"}
             </Button>
           </form>
 

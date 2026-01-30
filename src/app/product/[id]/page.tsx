@@ -1,258 +1,365 @@
-import { notFound } from "next/navigation"
-import Image from "next/image"
-import { Star, ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw } from "lucide-react"
+"use client"
+
+import React, { useState, useEffect } from "react"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import Image from "next/image"
+import { Heart, Share2, Minus, Plus, ShoppingCart, Truck, CheckCircle, BookOpen, Zap, Eye } from "lucide-react"
 
-// Mock product data - trong thực tế sẽ lấy từ database
-const products = [
-  {
-    id: 1,
-    name: 'MacBook Pro M3 14"',
-    brand: "Apple",
-    price: 52990000,
-    originalPrice: 55990000,
-    image: "/macbook-pro-laptop.png",
-    rating: 4.9,
-    reviews: 128,
-    specs: ["M3 Pro chip", "18GB RAM", "512GB SSD"],
-    description:
-      "MacBook Pro M3 14 inch mang đến hiệu suất vượt trội với chip M3 Pro mới nhất của Apple. Thiết kế sang trọng, màn hình Liquid Retina XDR sắc nét và thời lượng pin ấn tượng lên đến 18 giờ.",
-    features: [
-      "Chip Apple M3 Pro với CPU 11-core và GPU 14-core",
-      "18GB bộ nhớ thống nhất siêu nhanh",
-      "SSD 512GB tốc độ cao",
-      "Màn hình Liquid Retina XDR 14.2 inch",
-      "Camera FaceTime HD 1080p",
-      "Hệ thống âm thanh 6 loa với Spatial Audio",
-      "Thời lượng pin lên đến 18 giờ",
-      "3 cổng Thunderbolt 4, cổng HDMI, khe thẻ SDXC",
-    ],
-    images: ["/macbook-pro-laptop.png", "/macbook-pro-laptop.png", "/macbook-pro-laptop.png"],
-  },
-  {
-    id: 2,
-    name: "iPhone 15 Pro Max",
-    brand: "Apple",
-    price: 34990000,
-    originalPrice: 36990000,
-    image: "/iphone-15-pro-max-display.png",
-    rating: 4.8,
-    reviews: 256,
-    specs: ["A17 Pro chip", "256GB", "Titanium"],
-    description:
-      "iPhone 15 Pro Max với thiết kế Titanium cao cấp, chip A17 Pro mạnh mẽ và hệ thống camera Pro tiên tiến. Trải nghiệm smartphone đỉnh cao với màn hình Super Retina XDR 6.7 inch.",
-    features: [
-      "Chip A17 Pro với GPU 6-core",
-      "Bộ nhớ trong 256GB",
-      "Khung viền Titanium siêu bền",
-      "Màn hình Super Retina XDR 6.7 inch",
-      "Hệ thống camera Pro 48MP",
-      "Camera telephoto 5x",
-      "Action Button có thể tùy chỉnh",
-      "Cổng USB-C với USB 3",
-    ],
-    images: ["/iphone-15-pro-max-display.png", "/iphone-15-pro-max-display.png", "/iphone-15-pro-max-display.png"],
-  },
-  {
-    id: 3,
-    name: "Samsung Galaxy S24 Ultra",
-    brand: "Samsung",
-    price: 31990000,
-    originalPrice: 33990000,
-    image: "/samsung-galaxy-s24-ultra.png",
-    rating: 4.7,
-    reviews: 189,
-    specs: ["Snapdragon 8 Gen 3", "12GB RAM", "S Pen"],
-    description:
-      "Samsung Galaxy S24 Ultra với S Pen tích hợp, chip Snapdragon 8 Gen 3 mạnh mẽ và hệ thống camera AI tiên tiến. Màn hình Dynamic AMOLED 2X 6.8 inch cùng pin 5000mAh.",
-    features: [
-      "Chip Snapdragon 8 Gen 3 for Galaxy",
-      "RAM 12GB LPDDR5X",
-      "S Pen tích hợp với độ trễ thấp",
-      "Màn hình Dynamic AMOLED 2X 6.8 inch",
-      "Camera chính 200MP với OIS",
-      "Camera telephoto periscope 50MP zoom 5x",
-      "Pin 5000mAh sạc nhanh 45W",
-      "Khung viền Titanium bền bỉ",
-    ],
-    images: ["/samsung-galaxy-s24-ultra.png", "/samsung-galaxy-s24-ultra.png", "/samsung-galaxy-s24-ultra.png"],
-  },
-  {
-    id: 4,
-    name: "Dell XPS 13",
-    brand: "Dell",
-    price: 28990000,
-    originalPrice: 30990000,
-    image: "/dell-xps-13-laptop.png",
-    rating: 4.6,
-    reviews: 94,
-    specs: ["Intel i7-1360P", "16GB RAM", "512GB SSD"],
-    description:
-      "Dell XPS 13 với thiết kế siêu mỏng, chip Intel Core i7 thế hệ 13 và màn hình InfinityEdge sắc nét. Laptop cao cấp hoàn hảo cho công việc và giải trí.",
-    features: [
-      "Chip Intel Core i7-1360P thế hệ 13",
-      "RAM 16GB LPDDR5",
-      "SSD 512GB PCIe NVMe",
-      "Màn hình 13.4 inch FHD+ InfinityEdge",
-      "Thiết kế siêu mỏng chỉ 14.8mm",
-      "Thời lượng pin lên đến 12 giờ",
-      "Cổng Thunderbolt 4",
-      "Webcam FHD với Windows Hello",
-    ],
-    images: ["/dell-xps-13-laptop.png", "/dell-xps-13-laptop.png", "/dell-xps-13-laptop.png"],
-  },
-]
+interface ProductImage {
+  id: number
+  imageUrl: string
+  isMain: boolean
+}
 
-export default function ProductDetailPage({ params }: { params: { id: string } }) {
-  const productId = Number.parseInt(params.id)
-  const product = products.find((p) => p.id === productId)
+interface Brand {
+  id: number
+  name: string
+}
 
-  if (!product) {
-    notFound()
+interface Category {
+  id: number
+  name: string
+}
+
+interface Specification {
+  id: number
+  name: string
+  value: string
+}
+
+interface Configuration {
+  id: number
+  name: string
+  price: number
+  specifications: Specification[]
+}
+
+interface ProductData {
+  id: number
+  name: string
+  brand: Brand
+  description: string
+  images: ProductImage[]
+  totalQuality: number
+  configurations: Configuration[]
+}
+
+interface ProductDetail {
+  quantity: number
+  price: number
+  configuration: {
+    id: number
+    name: string
+    specifications: Specification[]
+  }
+  product: {
+    id: number
+    name: string
+    brand: Brand
+    description: string
+    images: { imageUrl: string }[]
+  }
+}
+
+
+export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: paramId } = React.use(params) // unwrap
+  const productId = Number(paramId)
+
+  const [product, setProduct] = useState<ProductData | null>(null)
+  const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null)
+  const [quantity, setQuantity] = useState(1)
+  const [totalPrice, setTotalPrice] = useState(0)
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [configQuantities, setConfigQuantities] = useState<{ [key: number]: number }>({})
+
+  useEffect(() => {
+    fetch(`http://localhost:8080/api/product-details/product/${productId}`)
+      .then(res => res.ok ? res.json() : [])
+      .then((data: ProductDetail[]) => {
+        if (!data || data.length === 0) return
+
+        // Lưu số lượng từng cấu hình
+        const quantitiesObj: { [key: number]: number } = {}
+        data.forEach(item => {
+          quantitiesObj[item.configuration.id] = item.quantity
+        })
+        setConfigQuantities(quantitiesObj)
+
+        // Map product
+        const images = data[0].product.images?.map(img => img.imageUrl) || ["/placeholder.svg"]
+        const configurations = data.map(item => ({
+          id: item.configuration.id,
+          name: item.configuration.name,
+          price: item.price,
+          specifications: item.configuration.specifications
+        }))
+
+        const totalQuantity = data.reduce((sum, item) => sum + (item.quantity || 0), 0)
+
+        setProduct({
+          id: data[0].product.id,
+          name: data[0].product.name,
+          brand: data[0].product.brand,
+          description: data[0].product.description,
+          images: images.map((imgUrl, idx) => ({ id: idx, imageUrl: imgUrl, isMain: idx === 0 })),
+          totalQuality: totalQuantity,
+          configurations
+        })
+
+        const firstConfig = configurations[0]
+        setSelectedConfigId(firstConfig.id)
+        setTotalPrice(firstConfig.price)
+      })
+  }, [productId])
+
+  if (!product) return null
+
+  const handleConfigChange = (configId: number, price: number) => {
+    setSelectedConfigId(configId)
+    setTotalPrice(price)
   }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(price)
-  }
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(price)
 
-  const discountPercent = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+  const selectedConfig = product.configurations.find(cfg => cfg.id === selectedConfigId)
+
+  // ---- ADD THIS FUNCTION ----
+  const addToCart = () => {
+    if (!product) return;
+
+    const selectedConfig = product.configurations.find(c => c.id === selectedConfigId);
+    if (!selectedConfig) return;
+
+    // object giỏ hàng
+    const cartItem = {
+      productId: product.id,
+      configId: selectedConfig.id,
+      name: product.name,
+      configName: selectedConfig.name,
+      brand: product.brand.name,
+      price: totalPrice,
+      quantity: quantity,
+      image: product.images[0]?.imageUrl || "/placeholder.svg"
+    };
+
+    // lấy cart hiện tại
+    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+    // kiểm tra nếu sản phẩm + cấu hình đã có thì cộng số lượng
+    const existing = cart.find(
+      (item: any) =>
+        item.productId === cartItem.productId &&
+        item.configId === cartItem.configId
+    );
+
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      cart.push(cartItem);
+    }
+
+    localStorage.setItem("cart", JSON.stringify(cart));
+
+    alert("Đã thêm vào giỏ hàng");
+  };
+
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-          {/* Product Images */}
-          <div className="space-y-4">
-            <div className="aspect-square bg-gray-50 rounded-xl p-8 relative">
-              <Image
-                src={product.image || "/placeholder.svg"}
-                alt={product.name}
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {product.images.map((img, index) => (
-                <div
-                  key={index}
-                  className="aspect-square bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors relative"
-                >
-                  <Image
-                    src={img || "/placeholder.svg"}
-                    alt={`${product.name} ${index + 1}`}
-                    fill
-                    className="object-contain"
-                  />
+      <main className="flex-1 py-8">
+        <div className="container max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Left: Image */}
+            <div className="space-y-4">
+              <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-white shadow-sm">
+                <Image
+                  src={product.images[selectedImageIndex]?.imageUrl || "/placeholder.svg"}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              {product.images.length > 1 && (
+                <div className="flex gap-3">
+                  {product.images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedImageIndex(idx)}
+                      className={`relative w-20 h-20 rounded-md overflow-hidden border-2 transition-all ${selectedImageIndex === idx ? "border-blue-600" : "border-gray-300 hover:border-gray-400"}`}
+                    >
+                      <Image src={img.imageUrl} alt={`View ${idx}`} fill className="object-cover" />
+                    </button>
+                  ))}
                 </div>
-              ))}
+              )}
+            </div>
+
+            {/* Right: Info */}
+            <div className="space-y-6">
+              <div>
+                <p className="text-sm font-semibold text-blue-600 mb-2">{product.brand.name}</p>
+                <h1 className="text-4xl font-bold text-gray-900">{product.name}</h1>
+              </div>
+
+              <div className="space-y-3 p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-600">Giá bán</p>
+                  <span className="text-4xl font-bold text-blue-600">{formatPrice(totalPrice)}</span>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="flex flex-wrap gap-3">
+                {product.totalQuality > 0 ? (
+                  <>
+                    <Badge className="bg-green-100 text-green-800 flex items-center gap-2 px-3 py-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Còn hàng
+                    </Badge>
+                    <Badge className="bg-blue-100 text-blue-800 flex items-center gap-2 px-3 py-2">
+                      <Truck className="w-4 h-4" />
+                      Giao hàng nhanh
+                    </Badge>
+                  </>
+                ) : (
+                  <Badge className="bg-red-100 text-red-800 flex items-center gap-2 px-3 py-2">Hết hàng</Badge>
+                )}
+              </div>
+
+              {/* Configuration Selection */}
+              {product.configurations.length > 0 && (
+                <Card className="border-blue-200 bg-blue-50">
+                  <CardContent className="pt-6">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-900">Chọn cấu hình</h3>
+                    <div className="flex flex-wrap gap-3">
+                      {product.configurations.map(cfg => {
+                        // lấy số lượng của cấu hình hiện tại
+                        const cfgQuantity = configQuantities[cfg.id] || 0
+
+                        return (
+                          <button
+                            key={cfg.id}
+                            onClick={() => handleConfigChange(cfg.id, cfg.price)}
+                            disabled={cfgQuantity === 0} // disable nếu hết hàng
+                            className={`px-4 py-2 rounded-lg border-2 font-medium transition-all 
+                ${selectedConfigId === cfg.id ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 bg-white text-gray-900 hover:border-blue-300"}
+                ${cfgQuantity === 0 ? "opacity-50 cursor-not-allowed" : ""}
+              `}
+                          >
+                            {cfg.name}
+                            {/* ({cfgQuantity}) */}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              {/* Quantity */}
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium text-gray-700">Số lượng:</label>
+                <div className="flex items-center border border-gray-300 rounded-lg bg-white">
+                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-2 hover:bg-gray-100">
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="px-6 py-2 font-medium">{quantity}</span>
+                  <button onClick={() => setQuantity(quantity + 1)} className="p-2 hover:bg-gray-100">
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4">
+                <Button size="lg" 
+                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                onClick={addToCart}
+                >
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  Thêm vào giỏ
+                </Button>
+                <Button size="lg" variant="outline" className="flex-none bg-white">
+                  <Heart className="w-5 h-5" />
+                </Button>
+                <Button size="lg" variant="outline" className="flex-none bg-white">
+                  <Share2 className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* Product Info */}
-          <div className="space-y-6">
-            <div>
-              <div className="text-sm text-gray-500 mb-2">{product.brand}</div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
+          {/* Tabs */}
+          <div className="mt-16 bg-white rounded-lg border border-gray-200 p-6">
+            <Tabs defaultValue="description" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
+                <TabsTrigger value="description" className="flex items-center gap-2">
+                  <Eye className="w-4 h-4" /> Mô tả
+                </TabsTrigger>
+                <TabsTrigger value="specs" className="flex items-center gap-2">
+                  <Zap className="w-4 h-4" /> Thông số
+                </TabsTrigger>
+                <TabsTrigger value="reviews" className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" /> Đánh giá
+                </TabsTrigger>
+              </TabsList>
 
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex items-center">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-5 h-5 ${
-                        i < Math.floor(product.rating) ? "text-yellow-400 fill-current" : "text-gray-300"
-                      }`}
-                    />
-                  ))}
+              {/* Description */}
+              <TabsContent value="description">
+                <div>
+                  <h3 className="text-xl font-semibold mb-4 text-gray-900">Mô tả sản phẩm</h3>
+                  <p className="text-gray-700 leading-relaxed">{product.description}</p>
                 </div>
-                <span className="text-gray-600">
-                  {product.rating} ({product.reviews} đánh giá)
-                </span>
-              </div>
+              </TabsContent>
 
-              <div className="flex items-center gap-4 mb-6">
-                <span className="text-3xl font-bold text-red-600">{formatPrice(product.price)}</span>
-                <span className="text-xl text-gray-500 line-through">{formatPrice(product.originalPrice)}</span>
-                <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                  -{discountPercent}%
-                </span>
-              </div>
-
-              <p className="text-gray-700 leading-relaxed mb-6">{product.description}</p>
-
-              <div className="space-y-4 mb-8">
-                <h3 className="font-semibold text-gray-900">Thông số kỹ thuật nổi bật:</h3>
-                <div className="grid grid-cols-1 gap-2">
-                  {product.specs.map((spec, index) => (
-                    <div key={index} className="flex items-center gap-2 text-gray-700">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                      {spec}
+              {/* Specs */}
+              <TabsContent value="specs">
+                <h3 className="text-xl font-semibold mb-4 text-gray-900">Thông số kỹ thuật</h3>
+                <div className="space-y-4">
+                  {selectedConfig?.specifications.map(spec => (
+                    <div key={spec.id} className="border border-gray-200 rounded-lg overflow-hidden px-4 py-3 flex items-center gap-3">
+                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-blue-600 text-xs font-bold">✓</span>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        <strong>{spec.name}:</strong> {spec.value}
+                      </p>
                     </div>
                   ))}
                 </div>
-              </div>
+              </TabsContent>
 
-              <div className="flex gap-4 mb-8">
-                <button className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                  <ShoppingCart className="w-5 h-5" />
-                  Thêm vào giỏ hàng
-                </button>
-                <button className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Heart className="w-5 h-5" />
-                </button>
-                <button className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Share2 className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Truck className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <div className="font-semibold text-sm">Miễn phí vận chuyển</div>
-                    <div className="text-xs text-gray-600">Đơn hàng từ 500k</div>
+              {/* Reviews */}
+              <TabsContent value="reviews">
+                <h3 className="text-xl font-semibold mb-4 text-gray-900">Đánh giá từ khách hàng</h3>
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i} className="text-yellow-400">★</span>
+                        ))}
+                      </div>
+                      <span className="font-semibold text-gray-900">Sản phẩm tuyệt vời</span>
+                    </div>
+                    <p className="text-gray-700 text-sm">
+                      Chất lượng rất tốt, giao hàng nhanh chóng. Tôi rất hài lòng.
+                    </p>
+                    <p className="text-gray-500 text-xs mt-2">- Nguyễn Văn A</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-green-600" />
-                  <div>
-                    <div className="font-semibold text-sm">Bảo hành chính hãng</div>
-                    <div className="text-xs text-gray-600">12 tháng</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <RotateCcw className="w-5 h-5 text-orange-600" />
-                  <div>
-                    <div className="font-semibold text-sm">Đổi trả dễ dàng</div>
-                    <div className="text-xs text-gray-600">Trong 7 ngày</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Product Features */}
-        <div className="bg-gray-50 rounded-xl p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Tính năng nổi bật</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {product.features.map((feature, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                <span className="text-gray-700">{feature}</span>
-              </div>
-            ))}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   )
