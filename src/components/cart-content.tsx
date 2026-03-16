@@ -8,9 +8,13 @@ import { Separator } from "@/components/ui/separator"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { ShoppingCart } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { useRouter } from "next/navigation"
 
 export function CartContent() {
   const [cart, setCart] = useState<any[]>([])
+  const { state } = useAuth()
+  const router = useRouter()
 
   useEffect(() => {
     const storedCart = JSON.parse(localStorage.getItem("cart") || "[]")
@@ -194,12 +198,21 @@ export function CartContent() {
               </div>
 
               <div className="space-y-3 pt-4">
-                <Button
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                  asChild
-                >
-                  <Link href="/checkout">Tiến hành thanh toán</Link>
-                </Button>
+                {state.isAuthenticated ? (
+                  <Button
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    asChild
+                  >
+                    <Link href="/checkout">Tiến hành thanh toán</Link>
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full bg-gradient-to-r from-gray-400 to-gray-500"
+                    onClick={() => router.push("/login")}
+                  >
+                    Đăng nhập để thanh toán
+                  </Button>
+                )}
                 <Button variant="outline" className="w-full bg-transparent" asChild>
                   <Link href="/">← Tiếp tục mua sắm</Link>
                 </Button>

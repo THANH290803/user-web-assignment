@@ -39,8 +39,10 @@ export default function PhonesPage() {
         const fetchBrands = async () => {
             try {
                 const res = await axios.get("http://localhost:8080/api/brands")
-                setBrands(res.data)
+
+                setBrands(res.data.result)   // sửa ở đây
                 setBrandsLoaded(true)
+
             } catch (err) {
                 console.error("Lỗi fetch brands:", err)
             }
@@ -71,7 +73,7 @@ export default function PhonesPage() {
                 const res = await axios.get("http://localhost:8080/api/product-details", {
                     params: paramsApi,
                 })
-                setProducts(res.data)
+                setProducts(res.data.result)
             } catch (err) {
                 console.error("Lỗi fetch products:", err)
             }
@@ -142,20 +144,30 @@ export default function PhonesPage() {
                         <ProductGrid
                             products={products.map((item: any) => ({
                                 id: item.product.id,
+
                                 name: item.product.name,
-                                brand: item.product.brand?.name,
-                                price: item.price,
-                                originalPrice: item.originalPrice || item.price,
+
+                                brand: item.brand?.name,
+
+                                price: item.productDetail?.price,
+
+                                originalPrice: item.productDetail?.price,
+
                                 image:
-                                    item.product.images?.find((img: any) => img.isMain)?.imageUrl ||
+                                    item.images?.find((img: any) => img.isMain)?.imageUrl ||
+                                    item.images?.[0]?.imageUrl ||
                                     "/placeholder.svg",
+
                                 rating: 4.5,
+
                                 reviews: 125,
+
                                 specs:
-                                    item.configuration?.specifications
+                                    item.specifications
                                         ?.slice(0, 3)
                                         .map((s: any) => `${s.name}: ${s.value}`) || [],
-                                quantity: item.quantity,
+
+                                quantity: item.productDetail?.quantity,
                             }))}
                         />
                     </div>

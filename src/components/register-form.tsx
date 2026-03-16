@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context"
 import toast from "react-hot-toast"
 
 export function RegisterForm() {
-  const [name, setName] = useState("")
+  const [username, setUserName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -28,7 +28,7 @@ export function RegisterForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!name || !email || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword) {
       toast.error("Vui lòng nhập đầy đủ thông tin")
       return
     }
@@ -48,7 +48,7 @@ export function RegisterForm() {
       return
     }
 
-    const success = await register(name, email, password, phone, address)
+    const success = await register(username, email, password, phone, address)
     if (success) {
       router.push("/")
     }
@@ -70,13 +70,13 @@ export function RegisterForm() {
 
             {/* Name */}
             <div className="space-y-2">
-              <Label htmlFor="name">Họ và tên</Label>
+              <Label htmlFor="name">Username</Label>
               <Input
                 id="name"
                 type="text"
-                placeholder="Nguyễn Văn A"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                placeholder="nva213"
+                value={username}
+                onChange={(e) => setUserName(e.target.value)}
                 required
               />
             </div>

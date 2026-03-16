@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context"
 import toast from "react-hot-toast"
 
 export function LoginForm() {
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const { login, state } = useAuth()
@@ -21,17 +21,17 @@ export function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!email || !password) {
+    if (!username || !password) {
       toast.error("Vui lòng nhập đầy đủ thông tin", { duration: 5000 })
       return
     }
 
-    const success = await login(email, password)
+    const success = await login(username, password)
     if (success) {
       toast.success("Đăng nhập thành công!", { duration: 5000 })
       router.push("/")
     } else {
-      toast.error("Email hoặc mật khẩu không chính xác", { duration: 5000 })
+      toast.error("username hoặc mật khẩu không chính xác", { duration: 5000 })
     }
   }
 
@@ -49,15 +49,15 @@ export function LoginForm() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
 
-            {/* Email */}
+            {/* username */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">username</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="username"
+                placeholder="your@username.com"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>

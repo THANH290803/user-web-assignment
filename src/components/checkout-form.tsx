@@ -26,30 +26,34 @@ export function CheckoutForm() {
     address: "",
   })
 
-  const [userId, setUserId] = useState(0) // <-- lưu userId ở đây
+  const [accountId, setAccountId] = useState<number | null>(null)
   const [citiesData, setCitiesData] = useState<any>({})
   const [city, setCity] = useState("")
   const [district, setDistrict] = useState("")
   const [ward, setWard] = useState("")
 
   useEffect(() => {
+
     const storedUser = JSON.parse(localStorage.getItem("user") || "null")
+
     if (storedUser) {
+
+      setAccountId(storedUser.id)
+
       setCustomer({
-        name: storedUser.name || "",
+        name: storedUser.username || "",
         phone: storedUser.phoneNumber || "",
         address: storedUser.address || "",
       })
-      setUserId(storedUser.id || 0) // <-- gán userId
     }
 
-    // Load cart
     const storedCart = JSON.parse(localStorage.getItem("cart") || "[]")
     setCart(storedCart)
 
     fetch("/hn_hcm_sample.json")
       .then((res) => res.json())
       .then((data) => setCitiesData(data))
+
   }, [])
 
   const districts = city ? citiesData[city] || [] : []
@@ -81,9 +85,9 @@ export function CheckoutForm() {
       customerAddress: fullAddress,
       paymentMethod,
       note,
-      userId,
       totalPrice,
       vat,
+      accountId,
       orderDetails: cart.map((item) => ({
         quantity: item.quantity,
         unitPrice: item.price,
@@ -99,13 +103,28 @@ export function CheckoutForm() {
     console.log(orderPayload)
 
     try {
-      await axios.post("http://localhost:8080/api/orders", orderPayload)
+
+      const token = localStorage.getItem("token")
+
+      await axios.post(
+        "http://localhost:8080/api/orders",
+        orderPayload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+
       alert("Đặt hàng thành công!")
       localStorage.removeItem("cart")
       router.push("/order-success")
+
     } catch (error) {
+
       console.error(error)
-      alert("Đặt hàng thất bại, vui lòng thử lại!")
+      alert("Đặt hàng thất bại!")
+
     }
   }
 
@@ -133,7 +152,7 @@ export function CheckoutForm() {
               <CardContent className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Họ và tên *</Label>
+                    <Label>Username *</Label>
                     <Input
                       value={customer.name}
                       onChange={(e) => setCustomer({ ...customer, name: e.target.value })}

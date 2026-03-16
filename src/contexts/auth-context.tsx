@@ -6,7 +6,7 @@ import toast from "react-hot-toast"
 
 interface User {
   id: number
-  name: string
+  username: string
   email: string
   phoneNumber?: string
   address?: string
@@ -31,7 +31,7 @@ const AuthContext = createContext<{
   state: AuthState
   dispatch: React.Dispatch<AuthAction>
   login: (email: string, password: string) => Promise<boolean>
-  register: (name: string, email: string, password: string, phone?: string, address?: string) => Promise<boolean>
+  register: (username: string, email: string, password: string, phone?: string, address?: string) => Promise<boolean>
   logout: () => void
   updateProfile: (data: Partial<User>) => void
 } | null>(null)
@@ -75,45 +75,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "SET_LOADING", payload: false })
   }, [])
 
-  const login = async (email: string, password?: string, toastFromForm = false): Promise<boolean> => {
+  const login = async (username: string, password?: string): Promise<boolean> => {
     dispatch({ type: "LOGIN_START" })
+
     try {
       const res = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       })
-      if (!res.ok) throw new Error("Đăng nhập thất bại")
-      const data = await res.json()
 
-      // map API user sang định dạng state
-      const user: User = {
-        id: data.user.id,
-        name: data.user.username, // dùng đúng username từ API
-        email: data.user.email,
-        phoneNumber: data.user.phoneNumber,
-        address: data.user.address,
-        avatar: data.user.avatar || "/placeholder.svg",
+      if (!res.ok) {
+        dispatch({ type: "LOGIN_FAILURE" })
+        return false
       }
 
-      // ✅ LƯU TOKEN
-      localStorage.setItem("token", data.token)
+      const data = await res.json()
 
-      // ✅ LƯU USER
+      const result = data.result
+
+      const user: User = {
+        id: result.user.id,
+        username: result.user.username,
+        email: result.user.email,
+        phoneNumber: result.user.phoneNumber,
+        address: result.user.address,
+        avatar: result.user.avatar || "/placeholder.svg",
+      }
+
+      localStorage.setItem("token", result.token)
       localStorage.setItem("user", JSON.stringify(user))
+
       dispatch({ type: "LOGIN_SUCCESS", payload: user })
 
-      if (toastFromForm) toast.success("Đăng nhập thành công!")
       return true
-    } catch {
+    } catch (error) {
+      console.error(error)
       dispatch({ type: "LOGIN_FAILURE" })
-      if (toastFromForm) toast.error("Email hoặc mật khẩu không chính xác")
       return false
     }
   }
 
   const register = async (
-    name: string,
+    username: string,
     email: string,
     password: string,
     phone?: string,
@@ -122,12 +126,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "SET_LOADING", payload: true })
     try {
       const res = await axios.post("http://localhost:8080/api/auth/register", {
-        username: name,
+        username: username,
         email,
         password,
         phoneNumber: phone || "",
         address: address || "",
-        roleId: 2, // mặc định role khách hàng
+        roleId: 3, // mặc định role khách hàng
       })
 
       if (res.status === 200 || res.status === 201) {
@@ -162,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await axios.patch(
         `http://localhost:8080/api/users/${state.user.id}`,
         {
-          name: data.name,
+          username: data.username,
           email: data.email,
           phoneNumber: data.phoneNumber,
           address: data.address,

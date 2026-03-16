@@ -50,19 +50,22 @@ interface ProductData {
 }
 
 interface ProductDetail {
-  quantity: number
+  id: number
   price: number
+  quantity: number
+
   configuration: {
     id: number
     name: string
     specifications: Specification[]
   }
+
   product: {
     id: number
     name: string
-    brand: Brand
     description: string
-    images: { imageUrl: string }[]
+    brand: Brand
+    category: Category
   }
 }
 
@@ -79,44 +82,83 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [configQuantities, setConfigQuantities] = useState<{ [key: number]: number }>({})
 
   useEffect(() => {
-    fetch(`http://localhost:8080/api/product-details/product/${productId}`)
-      .then(res => res.ok ? res.json() : [])
-      .then((data: ProductDetail[]) => {
-        if (!data || data.length === 0) return
 
-        // Lưu số lượng từng cấu hình
-        const quantitiesObj: { [key: number]: number } = {}
-        data.forEach(item => {
-          quantitiesObj[item.configuration.id] = item.quantity
-        })
-        setConfigQuantities(quantitiesObj)
+  const fetchProduct = async () => {
+    try {
 
-        // Map product
-        const images = data[0].product.images?.map(img => img.imageUrl) || ["/placeholder.svg"]
-        const configurations = data.map(item => ({
-          id: item.configuration.id,
-          name: item.configuration.name,
-          price: item.price,
-          specifications: item.configuration.specifications
+      // gọi 2 API song song
+      const [productRes, imageRes] = await Promise.all([
+        fetch(`http://localhost:8080/api/product-details/product/${productId}`),
+        fetch(`http://localhost:8080/api/images/product/${productId}`)
+      ])
+
+      const productJson = await productRes.json()
+      const imageJson = await imageRes.json()
+
+      const data: ProductDetail[] = productJson.result
+      const imagesApi = imageJson.result || []
+
+      if (!data || data.length === 0) return
+
+      // map images
+      const images = imagesApi.length > 0
+        ? imagesApi.map((img: any, idx: number) => ({
+          id: img.id ?? idx,
+          imageUrl: img.imageUrl,
+          isMain: img.isMain ?? idx === 0
         }))
+        : [{
+          id: 0,
+          imageUrl: "/placeholder.png",
+          isMain: true
+        }]
 
-        const totalQuantity = data.reduce((sum, item) => sum + (item.quantity || 0), 0)
+      // lưu số lượng từng config
+      const quantitiesObj: { [key: number]: number } = {}
 
-        setProduct({
-          id: data[0].product.id,
-          name: data[0].product.name,
-          brand: data[0].product.brand,
-          description: data[0].product.description,
-          images: images.map((imgUrl, idx) => ({ id: idx, imageUrl: imgUrl, isMain: idx === 0 })),
-          totalQuality: totalQuantity,
-          configurations
-        })
-
-        const firstConfig = configurations[0]
-        setSelectedConfigId(firstConfig.id)
-        setTotalPrice(firstConfig.price)
+      data.forEach(item => {
+        quantitiesObj[item.configuration.id] = item.quantity
       })
-  }, [productId])
+
+      setConfigQuantities(quantitiesObj)
+
+      const productData = data[0].product
+
+      const configurations = data.map(item => ({
+        id: item.configuration.id,
+        name: item.configuration.name,
+        price: item.price,
+        specifications: item.configuration.specifications
+      }))
+
+      const totalQuantity = data.reduce(
+        (sum, item) => sum + (item.quantity || 0),
+        0
+      )
+
+      setProduct({
+        id: productData.id,
+        name: productData.name,
+        brand: productData.brand,
+        description: productData.description,
+        images: images,
+        totalQuality: totalQuantity,
+        configurations
+      })
+
+      const firstConfig = configurations[0]
+
+      setSelectedConfigId(firstConfig.id)
+      setTotalPrice(firstConfig.price)
+
+    } catch (error) {
+      console.error("Lỗi load product:", error)
+    }
+  }
+
+  fetchProduct()
+
+}, [productId])
 
   if (!product) return null
 
@@ -279,9 +321,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
               {/* Action Buttons */}
               <div className="flex gap-4 pt-4">
-                <Button size="lg" 
-                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                onClick={addToCart}
+                <Button size="lg"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  onClick={addToCart}
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
                   Thêm vào giỏ

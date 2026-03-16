@@ -29,10 +29,19 @@ function Header() {
   const [categories, setCategories] = useState<any[]>([])
 
   useEffect(() => {
-    axios
-      .get("http://localhost:8080/api/categories")
-      .then((res) => setCategories(res.data))
-      .catch((err) => console.error("Lỗi load categories:", err))
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get("http://localhost:8080/api/categories")
+
+        if (res.data?.result) {
+          setCategories(res.data.result)
+        }
+      } catch (error) {
+        console.error("Lỗi load categories:", error)
+      }
+    }
+
+    fetchCategories()
   }, [])
 
   const [cartCount, setCartCount] = useState(0)

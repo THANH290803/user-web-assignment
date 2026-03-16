@@ -14,37 +14,50 @@ import { useAuth } from "@/contexts/auth-context"
 
 type Order = {
   id: number
-  status: number
-  // các field khác nếu có
+  orderCode: string
+  status: string
+  totalPrice: number
+  createdDate: string
+  customerName: string
+  customerPhone: string
+  customerAddress: string
 }
 
+interface User {
+  id: number
+  username: string
+  email: string
+  phoneNumber?: string
+  address?: string
+  avatar?: string
+}
 
 export function ProfileContent() {
   const { state, updateProfile } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
-    name: state.user?.name || "",
+    username: state.user?.username || "",
     email: state.user?.email || "",
     phoneNumber: state.user?.phoneNumber || "",
     address: state.user?.address || "",
   })
-  const statusTextMap: Record<number, string> = {
-    1: "Chờ xác nhận",
-    2: "Đang xử lý",
-    3: "Đang giao",
-    4: "Hoàn thành",
-    5: "Đã hủy",
+  const statusTextMap: Record<string, string> = {
+    PENDING: "Chờ xác nhận",
+    PROCESSING: "Đang xử lý",
+    SHIPPING: "Đang giao",
+    COMPLETED: "Hoàn thành",
+    CANCELED: "Đã hủy",
   }
 
 
   const [orderStatusFilter, setOrderStatusFilter] =
-    useState<number | "all">("all")
+    useState<string | "all">("all")
   const [currentPage, setCurrentPage] = useState(1)
   const ordersPerPage = 5
 
   const handleSave = async () => {
     await updateProfile({
-      name: formData.name,
+      username: formData.username,
       email: formData.email,
       phoneNumber: formData.phoneNumber,
       address: formData.address,
@@ -55,7 +68,7 @@ export function ProfileContent() {
 
   const handleCancel = () => {
     setFormData({
-      name: state.user?.name || "",
+      username: state.user?.username || "",
       email: state.user?.email || "",
       phoneNumber: state.user?.phoneNumber || "",
       address: state.user?.address || "",
@@ -68,9 +81,11 @@ export function ProfileContent() {
   useEffect(() => {
     if (!state.user?.id) return
 
-    fetch(`http://localhost:8080/api/orders/user/${state.user.id}`)
+    fetch(`http://localhost:8080/api/orders/account/${state.user.id}`)
       .then(res => res.json())
-      .then(data => setOrders(data))
+      .then(data => {
+        setOrders(data.result || [])
+      })
   }, [state.user?.id])
 
 
@@ -86,28 +101,32 @@ export function ProfileContent() {
   const endIndex = startIndex + ordersPerPage
   const currentOrders = filteredOrders.slice(startIndex, endIndex)
 
-  const handleFilterChange = (status: number | "all") => {
+  const handleFilterChange = (status: string | "all") => {
     setOrderStatusFilter(status)
   }
 
   const handleCancelOrder = async (orderId: number) => {
     try {
-      await fetch(`http://localhost:8080/api/orders/update-status-order/${orderId}`, {
+      const token = localStorage.getItem("token")
+
+      await fetch(`http://localhost:8080/api/orders/${orderId}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
-          status: 5, // ĐÃ HỦY
+          status: 5,
         }),
       })
 
-      // cập nhật lại state orders (KHÔNG reload trang)
+      // cập nhật state orders
       setOrders(prev =>
         prev.map(o =>
           o.id === orderId ? { ...o, status: 5 } : o
         )
       )
+
     } catch (error) {
       console.error("Hủy đơn thất bại", error)
     }
@@ -169,15 +188,15 @@ export function ProfileContent() {
                 <div className="flex flex-col items-center space-y-4">
                   <div className="relative">
                     <Avatar className="h-24 w-24">
-                      <AvatarImage src={state.user?.avatar || "/placeholder.svg"} alt={state.user?.name} />
-                      <AvatarFallback className="text-2xl">{state.user?.name?.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={state.user?.avatar || "/placeholder.svg"} alt={state.user?.username} />
+                      <AvatarFallback className="text-2xl">{state.user?.username?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 h-8 w-8 rounded-full">
                       <User className="h-4 w-4" />
                     </Button>
                   </div>
                   <div className="text-center">
-                    <h3 className="font-semibold text-lg">{state.user?.name}</h3>
+                    <h3 className="font-semibold text-lg">{state.user?.username}</h3>
                     <p className="text-sm text-muted-foreground">{state.user?.email}</p>
                     <Badge variant="secondary" className="mt-2">
                       Khách hàng thân thiết
@@ -208,17 +227,15 @@ export function ProfileContent() {
                 <CardContent className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="name">Họ và tên</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="pl-10"
-                          disabled={!isEditing}
-                        />
-                      </div>
+                      <Label htmlFor="username">Tên người dùng</Label>
+
+                      <Input
+                        id="username"
+                        value={formData.username}
+                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                        className="pl-10"
+                        disabled={!isEditing}
+                      />
                     </div>
                     <div>
                       <Label htmlFor="email">Email</Label>
@@ -274,6 +291,7 @@ export function ProfileContent() {
                 Đơn hàng của tôi
               </CardTitle>
               <div className="flex flex-wrap gap-2 mt-4">
+
                 <Button
                   variant={orderStatusFilter === "all" ? "default" : "outline"}
                   size="sm"
@@ -283,44 +301,45 @@ export function ProfileContent() {
                 </Button>
 
                 <Button
-                  variant={orderStatusFilter === 1 ? "default" : "outline"}
+                  variant={orderStatusFilter === "PENDING" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => handleFilterChange(1)}
+                  onClick={() => handleFilterChange("PENDING")}
                 >
-                  Chờ xác nhận ({orders.filter(o => o.status === 1).length})
+                  Chờ xác nhận ({orders.filter(o => o.status === "PENDING").length})
                 </Button>
 
                 <Button
-                  variant={orderStatusFilter === 2 ? "default" : "outline"}
+                  variant={orderStatusFilter === "PROCESSING" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => handleFilterChange(2)}
+                  onClick={() => handleFilterChange("PROCESSING")}
                 >
-                  Đang xử lý ({orders.filter(o => o.status === 2).length})
+                  Đang xử lý ({orders.filter(o => o.status === "PROCESSING").length})
                 </Button>
 
                 <Button
-                  variant={orderStatusFilter === 3 ? "default" : "outline"}
+                  variant={orderStatusFilter === "SHIPPING" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => handleFilterChange(3)}
+                  onClick={() => handleFilterChange("SHIPPING")}
                 >
-                  Đang giao ({orders.filter(o => o.status === 3).length})
+                  Đang giao ({orders.filter(o => o.status === "SHIPPING").length})
                 </Button>
 
                 <Button
-                  variant={orderStatusFilter === 4 ? "default" : "outline"}
+                  variant={orderStatusFilter === "COMPLETED" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => handleFilterChange(4)}
+                  onClick={() => handleFilterChange("COMPLETED")}
                 >
-                  Hoàn thành ({orders.filter(o => o.status === 4).length})
+                  Hoàn thành ({orders.filter(o => o.status === "COMPLETED").length})
                 </Button>
 
                 <Button
-                  variant={orderStatusFilter === 5 ? "default" : "outline"}
+                  variant={orderStatusFilter === "CANCELED" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => handleFilterChange(5)}
+                  onClick={() => handleFilterChange("CANCELED")}
                 >
-                  Đã hủy ({orders.filter(o => o.status === 5).length})
+                  Đã hủy ({orders.filter(o => o.status === "CANCELED").length})
                 </Button>
+
               </div>
             </CardHeader>
             <CardContent>
@@ -334,18 +353,18 @@ export function ProfileContent() {
                             <h3 className="font-semibold text-lg">Mã đơn: {order.orderCode}</h3>
                             <Badge
                               className={
-                                order.status === 1
+                                order.status === "PENDING"
                                   ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                                  : order.status === 2
+                                  : order.status === "PROCESSING"
                                     ? "bg-blue-100 text-blue-800 border-blue-300"
-                                    : order.status === 3
+                                    : order.status === "SHIPPING"
                                       ? "bg-purple-100 text-purple-800 border-purple-300"
-                                      : order.status === 4
+                                      : order.status === "COMPLETED"
                                         ? "bg-green-100 text-green-800 border-green-300"
                                         : "bg-red-100 text-red-800 border-red-300"
                               }
                             >
-                              {statusTextMap[order.status]}
+                              {statusTextMap[order.status] || order.status}
                             </Badge>
                           </div>
 
@@ -384,7 +403,7 @@ export function ProfileContent() {
                               Chi tiết
                             </a>
                           </Button>
-                          {order.status === 1 && (
+                          {order.status === "PENDING" && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -395,7 +414,7 @@ export function ProfileContent() {
                               Hủy đơn
                             </Button>
                           )}
-                          {order.status === "4" && (
+                          {order.status === "COMPLETED" && (
                             <Button variant="outline" size="sm" className="h-8 px-2 text-xs bg-transparent w-[120px]">
                               <ShoppingCart className="h-3 w-3 mr-1" />
                               Mua lại

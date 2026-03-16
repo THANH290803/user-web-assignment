@@ -19,6 +19,12 @@ type ApiCategory = {
   deletedAt?: string | null
 }
 
+type ApiResponse<T> = {
+  code: number
+  message: string
+  result: T
+}
+
 // Kết hợp API + FE template
 type Category = ApiCategory & CategoryInfo
 
@@ -83,9 +89,9 @@ export default function Categories() {
 
   useEffect(() => {
     axios
-      .get<ApiCategory[]>("http://localhost:8080/api/categories")
+      .get<ApiResponse<ApiCategory[]>>("http://localhost:8080/api/categories")
       .then((res) => {
-        const apiData = res.data || []
+        const apiData = res.data.result || []
 
         const merged: Category[] = apiData
           .filter((c) => categoryTemplate[c.name])
