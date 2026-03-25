@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Header } from "@/components/header";
@@ -7,7 +6,7 @@ import { ProductFilters } from "@/components/product-filters";
 import { ProductGrid } from "@/components/product-grid";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation"; // 👈 Dùng cái này để lấy chữ iPhone trên URL
 
 interface FilterState {
   brands: string[];
@@ -17,19 +16,14 @@ interface FilterState {
   sortDir?: "asc" | "desc";
 }
 
-export default function PhonesPage() {
-  const params = useParams();
-  const categoryId = params.id;
+export default function SearchPage() {
+  const searchParams = useSearchParams();
+  const query = searchParams.get("q") || ""; // 👈 Lấy chữ "iphone" từ URL ?q=iphone
 
   const [products, setProducts] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [brandsLoaded, setBrandsLoaded] = useState(false);
-
-  // 1. TẠO STATE ĐỂ LƯU THÔNG TIN DANH MỤC
-  const [categoryInfo, setCategoryInfo] = useState<{
-    name: string;
-    description: string;
-  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [filters, setFilters] = useState<FilterState>({
     brands: [],
@@ -38,32 +32,6 @@ export default function PhonesPage() {
     sortBy: undefined,
     sortDir: undefined,
   });
-
-  // 2. FETCH THÔNG TIN DANH MỤC THEO ID
-  useEffect(() => {
-    const fetchCategoryDetail = async () => {
-      try {
-        // Gọi API lấy chi tiết danh mục (Giả sử endpoint của ông là /api/categories/{id})
-        const res = await axios.get(
-          `http://localhost:8080/api/categories/${categoryId}`,
-        );
-        if (res.data?.result) {
-          setCategoryInfo({
-            name: res.data.result.name,
-            description: res.data.result.description,
-          });
-        }
-      } catch (err) {
-        console.error("Lỗi fetch category detail:", err);
-        // Fallback nếu lỗi
-        setCategoryInfo({
-          name: "Danh mục",
-          description: "Khám phá các sản phẩm mới nhất",
-        });
-      }
-    };
-    if (categoryId) fetchCategoryDetail();
-  }, [categoryId]);
 
   // Load brands
   useEffect(() => {
@@ -79,14 +47,17 @@ export default function PhonesPage() {
     fetchBrands();
   }, []);
 
-  // Fetch products
+  // Fetch & Filter products
   useEffect(() => {
     if (!brandsLoaded) return;
 
-    const fetchProducts = async () => {
+    const fetchSearchedProducts = async () => {
+      setIsLoading(true);
       try {
-        const paramsApi: any = { categoryId };
+        // 1. Nhét cái searchKey của ông vào đây
+        const paramsApi: any = { searchKey: query };
 
+        // 2. Kẹp thêm mấy cái filter ở cột trái (nếu user có chọn)
         if (filters.brands.length > 0) {
           const brandIds = filters.brands
             .map((name) => brands.find((b) => b.name === name)?.id)
@@ -105,14 +76,23 @@ export default function PhonesPage() {
             params: paramsApi,
           },
         );
-        setProducts(res.data.result);
+
+        setProducts(res.data.result || []);
       } catch (err) {
         console.error("Lỗi fetch products:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchProducts();
-  }, [categoryId, filters, brandsLoaded]);
+    // Chỉ gọi API khi có từ khóa search
+    if (query) {
+      fetchSearchedProducts();
+    } else {
+      setProducts([]);
+      setIsLoading(false);
+    }
+  }, [query, filters, brandsLoaded]);
 
   const handleFilterChange = (newFilters: FilterState) => {
     setFilters(newFilters);
@@ -135,10 +115,6 @@ export default function PhonesPage() {
         sortBy = "createdAt";
         sortDir = "desc";
         break;
-      case "Bán chạy nhất":
-        sortBy = "sold";
-        sortDir = "desc";
-        break;
     }
     setFilters((prev) => ({ ...prev, sortBy, sortDir }));
   };
@@ -149,13 +125,12 @@ export default function PhonesPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          {/* 3. HIỂN THỊ ĐỘNG TÊN VÀ MÔ TẢ DANH MỤC */}
+          {/* Hiển thị từ khóa tìm kiếm */}
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {categoryInfo?.name || "Đang tải..."}
+            Kết quả tìm kiếm cho: "{query}"
           </h1>
           <p className="text-gray-600">
-            {categoryInfo?.description ||
-              `Khám phá bộ sưu tập ${categoryInfo?.name} cao cấp với hiệu năng vượt trội`}
+            Tìm thấy {products.length} sản phẩm phù hợp
           </p>
         </div>
 
@@ -176,31 +151,46 @@ export default function PhonesPage() {
                 <option>Sắp xếp theo giá</option>
                 <option>Giá thấp đến cao</option>
                 <option>Giá cao đến thấp</option>
-                <option>Mới nhất</option>
-                <option>Bán chạy nhất</option>
               </select>
             </div>
 
-            <ProductGrid
-              products={products.map((item: any) => ({
-                id: item.product.id,
-                name: item.product.name,
-                brand: item.brand?.name,
-                price: item.productDetail?.price,
-                originalPrice: item.productDetail?.price,
-                image:
-                  item.images?.find((img: any) => img.isMain)?.imageUrl ||
-                  item.images?.[0]?.imageUrl ||
-                  "/placeholder.svg",
-                rating: 4.5,
-                reviews: 125,
-                specs:
-                  item.specifications
-                    ?.slice(0, 3)
-                    .map((s: any) => `${s.name}: ${s.value}`) || [],
-                quantity: item.productDetail?.quantity,
-              }))}
-            />
+            {isLoading ? (
+              <div className="text-center py-10 text-gray-500">
+                Đang tìm kiếm...
+              </div>
+            ) : products.length > 0 ? (
+              <ProductGrid
+                products={products.map((item: any) => ({
+                  id: item.product.id,
+                  name: item.product.name,
+                  brand: item.brand?.name,
+
+                  price: item.productDetail?.price,
+                  originalPrice: item.productDetail?.price,
+
+                  image:
+                    item.images?.find((img: any) => img.isMain)?.imageUrl ||
+                    item.images?.[0]?.imageUrl ||
+                    "/placeholder.svg",
+                  rating: 5.0,
+                  reviews: 99,
+                  specs:
+                    item.specifications
+                      ?.slice(0, 3)
+                      .map((s: any) => `${s.name}: ${s.value}`) || [],
+                  quantity: item.productDetail?.quantity,
+                }))}
+              />
+            ) : (
+              <div className="text-center py-20 bg-white rounded-lg border border-gray-200">
+                <h3 className="text-xl font-semibold text-gray-700">
+                  Rất tiếc, không tìm thấy sản phẩm nào!
+                </h3>
+                <p className="text-gray-500 mt-2">
+                  Vui lòng thử lại với từ khóa khác (vd: Samsung, iPhone...)
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </main>

@@ -1,24 +1,25 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import { CartProvider } from "@/contexts/cart-context"
-import { AuthProvider } from "@/contexts/auth-context"
-import { Toaster } from "react-hot-toast"
-import { Suspense } from "react"
-import "./globals.css"
+import type React from "react";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { CartProvider } from "@/contexts/cart-context";
+import { AuthProvider } from "@/contexts/auth-context";
+import { Toaster } from "react-hot-toast";
+import { Suspense } from "react";
+import { ChatWidget } from "@/components/chatbot/chat-widget";
+import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "TechStore - Công nghệ hàng đầu",
   description: "Cửa hàng laptop, điện thoại và phụ kiện công nghệ chính hãng",
   generator: "v0.app",
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="vi">
@@ -28,10 +29,11 @@ export default function RootLayout({
             <CartProvider>
               {children}
               <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
+              <ChatWidget />
             </CartProvider>
           </AuthProvider>
         </Suspense>
       </body>
     </html>
-  )
+  );
 }

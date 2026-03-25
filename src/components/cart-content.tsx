@@ -1,58 +1,81 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import Link from "next/link"
-import { useEffect, useState } from "react"
-import { ShoppingCart } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-import { useRouter } from "next/navigation"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { ShoppingCart, Loader2 } from "lucide-react"; // 👈 Thêm icon load
+import { useAuth } from "@/contexts/auth-context";
+import { useRouter } from "next/navigation";
 
 export function CartContent() {
-  const [cart, setCart] = useState<any[]>([])
-  const { state } = useAuth()
-  const router = useRouter()
+  const [cart, setCart] = useState<any[]>([]);
+  const { state } = useAuth();
+  const router = useRouter();
+
+  // 🛑 Thêm state chặn double-click
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const storedCart = JSON.parse(localStorage.getItem("cart") || "[]")
-    setCart(storedCart)
-  }, [])
-
+    const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
+    setCart(storedCart);
+  }, []);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
-    }).format(price)
-  }
+    }).format(price);
+  };
 
-  const updateQuantity = (configId: number, newQuantity: number) => {
+  const updateQuantity = (
+    configId: number,
+    newQuantity: number,
+    stock: number,
+  ) => {
+    if (newQuantity > stock) {
+      alert(`Dạ shop chỉ còn tối đa ${stock} sản phẩm này thôi ạ!`);
+      return;
+    }
+
     const updated = cart.map((item) =>
-      item.configId === configId ? { ...item, quantity: newQuantity } : item
-    )
+      item.configId === configId ? { ...item, quantity: newQuantity } : item,
+    );
 
-    setCart(updated)
-    localStorage.setItem("cart", JSON.stringify(updated))
-  }
+    setCart(updated);
+    localStorage.setItem("cart", JSON.stringify(updated));
+    // Thông báo cho Header update icon giỏ hàng
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
 
   const removeItem = (configId: number) => {
-    const updated = cart.filter((item) => item.configId !== configId)
-    setCart(updated)
-    localStorage.setItem("cart", JSON.stringify(updated))
-  }
+    const updated = cart.filter((item) => item.configId !== configId);
+    setCart(updated);
+    localStorage.setItem("cart", JSON.stringify(updated));
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
 
   const clearCart = () => {
-    setCart([])
-    localStorage.setItem("cart", "[]")
-  }
+    setCart([]);
+    localStorage.setItem("cart", "[]");
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
 
-  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+  // 🛑 Hàm xử lý chuyển trang chống click đúp
+  const handleCheckout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    // Chuyển trang xong vẫn giữ state loading 1 tí cho chắc cú
+    router.push("/checkout");
+    setTimeout(() => setIsSubmitting(false), 2000);
+  };
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-
+  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   if (cart.length === 0) {
     return (
@@ -63,7 +86,8 @@ export function CartContent() {
           </div>
           <h1 className="text-3xl font-bold mb-4">Giỏ hàng trống</h1>
           <p className="text-muted-foreground text-lg mb-8">
-            Bạn chưa có sản phẩm nào trong giỏ hàng. Hãy khám phá các sản phẩm tuyệt vời của chúng tôi!
+            Bạn chưa có sản phẩm nào trong giỏ hàng. Hãy khám phá các sản phẩm
+            tuyệt vời của chúng tôi!
           </p>
           <Button
             asChild
@@ -73,7 +97,7 @@ export function CartContent() {
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -82,7 +106,9 @@ export function CartContent() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Giỏ hàng của bạn</h1>
-            <p className="text-muted-foreground">Bạn có {itemCount} sản phẩm trong giỏ hàng</p>
+            <p className="text-muted-foreground">
+              Bạn có {itemCount} sản phẩm trong giỏ hàng
+            </p>
           </div>
           {cart.length > 0 && (
             <Button
@@ -90,7 +116,7 @@ export function CartContent() {
               onClick={clearCart}
               className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 bg-transparent"
             >
-              × Xóa tất cả {/* replaced trash emoji with simple × symbol */}
+              × Xóa tất cả
             </Button>
           )}
         </div>
@@ -100,7 +126,10 @@ export function CartContent() {
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
           {cart.map((item, index) => (
-            <Card key={`${item.productId}-${item.configId}-${index}`} className="overflow-hidden">
+            <Card
+              key={`${item.productId}-${item.configId}-${index}`}
+              className="overflow-hidden"
+            >
               <CardContent className="p-6">
                 <div className="flex gap-4">
                   <div className="relative w-24 h-24 flex-shrink-0">
@@ -115,8 +144,12 @@ export function CartContent() {
                   <div className="flex-1 space-y-2">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="text-sm text-muted-foreground">{item.brand}</p>
-                        <h3 className="font-semibold text-lg line-clamp-2">{item.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {item.brand}
+                        </p>
+                        <h3 className="font-semibold text-lg line-clamp-2">
+                          {item.name}
+                        </h3>
                       </div>
                       <Button
                         variant="ghost"
@@ -140,25 +173,44 @@ export function CartContent() {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 bg-transparent"
-                          onClick={() => updateQuantity(item.configId, item.quantity - 1)}
+                          onClick={() =>
+                            updateQuantity(
+                              item.configId,
+                              item.quantity - 1,
+                              item.stock,
+                            )
+                          }
                           disabled={item.quantity <= 1}
                         >
-                          − {/* kept simple minus symbol */}
+                          −
                         </Button>
-                        <span className="font-medium w-8 text-center">{item.quantity}</span>
+                        <span className="font-medium w-8 text-center">
+                          {item.quantity}
+                        </span>
                         <Button
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 bg-transparent"
-                          onClick={() => updateQuantity(item.configId, item.quantity + 1)}
+                          onClick={() =>
+                            updateQuantity(
+                              item.configId,
+                              item.quantity + 1,
+                              item.stock,
+                            )
+                          }
+                          disabled={item.quantity >= item.stock}
                         >
-                          + {/* kept simple plus symbol */}
+                          +
                         </Button>
                       </div>
 
                       <div className="text-right">
-                        <p className="font-bold text-lg text-primary">{formatPrice(item.price * item.quantity)}</p>
-                        <p className="text-sm text-muted-foreground">{formatPrice(item.price)} / sản phẩm</p>
+                        <p className="font-bold text-lg text-primary">
+                          {formatPrice(item.price * item.quantity)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatPrice(item.price)} / sản phẩm
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -199,11 +251,20 @@ export function CartContent() {
 
               <div className="space-y-3 pt-4">
                 {state.isAuthenticated ? (
+                  // 🛑 ĐÃ SỬA: Thay Link bằng Button bọc hàm xử lý chống click đúp
                   <Button
+                    onClick={handleCheckout}
+                    disabled={isSubmitting}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    asChild
                   >
-                    <Link href="/checkout">Tiến hành thanh toán</Link>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Đang chuyển...
+                      </>
+                    ) : (
+                      "Tiến hành thanh toán"
+                    )}
                   </Button>
                 ) : (
                   <Button
@@ -213,7 +274,11 @@ export function CartContent() {
                     Đăng nhập để thanh toán
                   </Button>
                 )}
-                <Button variant="outline" className="w-full bg-transparent" asChild>
+                <Button
+                  variant="outline"
+                  className="w-full bg-transparent"
+                  asChild
+                >
                   <Link href="/">← Tiếp tục mua sắm</Link>
                 </Button>
               </div>
@@ -237,6 +302,5 @@ export function CartContent() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

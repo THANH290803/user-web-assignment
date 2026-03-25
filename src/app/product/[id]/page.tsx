@@ -69,9 +69,8 @@ interface ProductDetail {
   }
 }
 
-
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: paramId } = React.use(params) // unwrap
+  const { id: paramId } = React.use(params)
   const productId = Number(paramId)
 
   const [product, setProduct] = useState<ProductData | null>(null)
@@ -82,102 +81,119 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [configQuantities, setConfigQuantities] = useState<{ [key: number]: number }>({})
 
   useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const [productRes, imageRes] = await Promise.all([
+          fetch(`http://localhost:8080/api/product-details/product/${productId}`),
+          fetch(`http://localhost:8080/api/images/product/${productId}`)
+        ])
 
-  const fetchProduct = async () => {
-    try {
+        const productJson = await productRes.json()
+        const imageJson = await imageRes.json()
 
-      // gọi 2 API song song
-      const [productRes, imageRes] = await Promise.all([
-        fetch(`http://localhost:8080/api/product-details/product/${productId}`),
-        fetch(`http://localhost:8080/api/images/product/${productId}`)
-      ])
+        const data: ProductDetail[] = productJson.result
+        const imagesApi = imageJson.result || []
 
-      const productJson = await productRes.json()
-      const imageJson = await imageRes.json()
+        if (!data || data.length === 0) return
 
-      const data: ProductDetail[] = productJson.result
-      const imagesApi = imageJson.result || []
+        const images = imagesApi.length > 0
+          ? imagesApi.map((img: any, idx: number) => ({
+            id: img.id ?? idx,
+            imageUrl: img.imageUrl,
+            isMain: img.isMain ?? idx === 0
+          }))
+          : [{
+            id: 0,
+            imageUrl: "/placeholder.png",
+            isMain: true
+          }]
 
-      if (!data || data.length === 0) return
+        const quantitiesObj: { [key: number]: number } = {}
 
-      // map images
-      const images = imagesApi.length > 0
-        ? imagesApi.map((img: any, idx: number) => ({
-          id: img.id ?? idx,
-          imageUrl: img.imageUrl,
-          isMain: img.isMain ?? idx === 0
+        data.forEach(item => {
+          quantitiesObj[item.configuration.id] = item.quantity
+        })
+
+        setConfigQuantities(quantitiesObj)
+
+        const productData = data[0].product
+
+        const configurations = data.map(item => ({
+          id: item.configuration.id,
+          name: item.configuration.name,
+          price: item.price,
+          specifications: item.configuration.specifications
         }))
-        : [{
-          id: 0,
-          imageUrl: "/placeholder.png",
-          isMain: true
-        }]
 
-      // lưu số lượng từng config
-      const quantitiesObj: { [key: number]: number } = {}
+        const totalQuantity = data.reduce(
+          (sum, item) => sum + (item.quantity || 0),
+          0
+        )
 
-      data.forEach(item => {
-        quantitiesObj[item.configuration.id] = item.quantity
-      })
+        setProduct({
+          id: productData.id,
+          name: productData.name,
+          brand: productData.brand,
+          description: productData.description,
+          images: images,
+          totalQuality: totalQuantity,
+          configurations
+        })
 
-      setConfigQuantities(quantitiesObj)
+        const firstConfig = configurations[0]
 
-      const productData = data[0].product
+        setSelectedConfigId(firstConfig.id)
+        setTotalPrice(firstConfig.price)
 
-      const configurations = data.map(item => ({
-        id: item.configuration.id,
-        name: item.configuration.name,
-        price: item.price,
-        specifications: item.configuration.specifications
-      }))
-
-      const totalQuantity = data.reduce(
-        (sum, item) => sum + (item.quantity || 0),
-        0
-      )
-
-      setProduct({
-        id: productData.id,
-        name: productData.name,
-        brand: productData.brand,
-        description: productData.description,
-        images: images,
-        totalQuality: totalQuantity,
-        configurations
-      })
-
-      const firstConfig = configurations[0]
-
-      setSelectedConfigId(firstConfig.id)
-      setTotalPrice(firstConfig.price)
-
-    } catch (error) {
-      console.error("Lỗi load product:", error)
+      } catch (error) {
+        console.error("Lỗi load product:", error)
+      }
     }
-  }
 
-  fetchProduct()
-
-}, [productId])
+    fetchProduct()
+  }, [productId])
 
   if (!product) return null
 
   const handleConfigChange = (configId: number, price: number) => {
     setSelectedConfigId(configId)
     setTotalPrice(price)
+    setQuantity(1) // Reset số lượng về 1 khi đổi cấu hình khác
   }
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(price)
 
   const selectedConfig = product.configurations.find(cfg => cfg.id === selectedConfigId)
+  
+  // Lấy TỒN KHO THỰC TẾ của cấu hình đang chọn
+  const currentStock = selectedConfigId ? (configQuantities[selectedConfigId] || 0) : 0;
 
-  // ---- ADD THIS FUNCTION ----
+  // ==========================================
+  // 🛑 CHỐT CHẶN NÚT [+] VÀ [-] (Tránh khách tăng lố tồn kho)
+  // ==========================================
+  const handleIncreaseQty = () => {
+    if (quantity < currentStock) {
+      setQuantity(quantity + 1);
+    } else {
+      alert(`Dạ shop chỉ còn tối đa ${currentStock} sản phẩm này thôi ạ!`);
+    }
+  }
+
+  const handleDecreaseQty = () => {
+    setQuantity(Math.max(1, quantity - 1));
+  }
+
+  // ==========================================
+  // 🛑 CHỐT CHẶN THÊM VÀO GIỎ HÀNG (LocalStorage)
+  // ==========================================
   const addToCart = () => {
-    if (!product) return;
+    if (!product || !selectedConfig) return;
 
-    const selectedConfig = product.configurations.find(c => c.id === selectedConfigId);
-    if (!selectedConfig) return;
+    if (currentStock <= 0) {
+      alert("Sản phẩm này hiện đang hết hàng!");
+      return;
+    }
 
     // object giỏ hàng
     const cartItem = {
@@ -188,6 +204,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       brand: product.brand.name,
       price: totalPrice,
       quantity: quantity,
+      stock: currentStock, // LƯU LUÔN TỒN KHO VÀO LOCALSTORAGE ĐỂ LÁT TỚI TRANG GIỎ HÀNG CÒN XÀI
       image: product.images[0]?.imageUrl || "/placeholder.svg"
     };
 
@@ -202,16 +219,19 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     );
 
     if (existing) {
+      // CHECK TỒN KHO TRƯỚC KHI CỘNG DỒN VÀO GIỎ HÀNG CŨ
+      if (existing.quantity + quantity > currentStock) {
+        alert(`Trong giỏ hàng của bạn đã có ${existing.quantity} cái. Shop chỉ còn tổng cộng ${currentStock} cái thôi ạ!`);
+        return;
+      }
       existing.quantity += quantity;
     } else {
       cart.push(cartItem);
     }
 
     localStorage.setItem("cart", JSON.stringify(cart));
-
-    alert("Đã thêm vào giỏ hàng");
+    alert("Đã thêm vào giỏ hàng thành công!");
   };
-
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -219,7 +239,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       <main className="flex-1 py-8">
         <div className="container max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Left: Image */}
+            {/* Left: Image (Giữ nguyên) */}
             <div className="space-y-4">
               <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-white shadow-sm">
                 <Image
@@ -260,11 +280,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
               {/* Status */}
               <div className="flex flex-wrap gap-3">
-                {product.totalQuality > 0 ? (
+                {currentStock > 0 ? (
                   <>
                     <Badge className="bg-green-100 text-green-800 flex items-center gap-2 px-3 py-2">
                       <CheckCircle className="w-4 h-4" />
-                      Còn hàng
+                      Còn hàng ({currentStock}) {/* Hiển thị luôn số lượng tồn kho cho Uy tín */}
                     </Badge>
                     <Badge className="bg-blue-100 text-blue-800 flex items-center gap-2 px-3 py-2">
                       <Truck className="w-4 h-4" />
@@ -283,21 +303,19 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     <h3 className="text-lg font-semibold mb-4 text-gray-900">Chọn cấu hình</h3>
                     <div className="flex flex-wrap gap-3">
                       {product.configurations.map(cfg => {
-                        // lấy số lượng của cấu hình hiện tại
                         const cfgQuantity = configQuantities[cfg.id] || 0
 
                         return (
                           <button
                             key={cfg.id}
                             onClick={() => handleConfigChange(cfg.id, cfg.price)}
-                            disabled={cfgQuantity === 0} // disable nếu hết hàng
+                            disabled={cfgQuantity === 0}
                             className={`px-4 py-2 rounded-lg border-2 font-medium transition-all 
                 ${selectedConfigId === cfg.id ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 bg-white text-gray-900 hover:border-blue-300"}
                 ${cfgQuantity === 0 ? "opacity-50 cursor-not-allowed" : ""}
               `}
                           >
                             {cfg.name}
-                            {/* ({cfgQuantity}) */}
                           </button>
                         )
                       })}
@@ -305,15 +323,24 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                   </CardContent>
                 </Card>
               )}
+
               {/* Quantity */}
               <div className="flex items-center gap-4">
                 <label className="text-sm font-medium text-gray-700">Số lượng:</label>
                 <div className="flex items-center border border-gray-300 rounded-lg bg-white">
-                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-2 hover:bg-gray-100">
+                  <button 
+                    onClick={handleDecreaseQty} 
+                    className="p-2 hover:bg-gray-100 disabled:opacity-50"
+                    disabled={quantity <= 1 || currentStock === 0}
+                  >
                     <Minus className="w-4 h-4" />
                   </button>
                   <span className="px-6 py-2 font-medium">{quantity}</span>
-                  <button onClick={() => setQuantity(quantity + 1)} className="p-2 hover:bg-gray-100">
+                  <button 
+                    onClick={handleIncreaseQty} 
+                    className="p-2 hover:bg-gray-100 disabled:opacity-50"
+                    disabled={quantity >= currentStock || currentStock === 0}
+                  >
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
@@ -322,11 +349,16 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               {/* Action Buttons */}
               <div className="flex gap-4 pt-4">
                 <Button size="lg"
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  className={`flex-1 transition-all duration-300 ${
+                    currentStock === 0 
+                    ? "bg-gray-400 cursor-not-allowed" 
+                    : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  }`}
                   onClick={addToCart}
+                  disabled={currentStock === 0}
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
-                  Thêm vào giỏ
+                  {currentStock === 0 ? "Hết hàng" : "Thêm vào giỏ"}
                 </Button>
                 <Button size="lg" variant="outline" className="flex-none bg-white">
                   <Heart className="w-5 h-5" />
@@ -338,7 +370,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             </div>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs (Giữ nguyên) */}
           <div className="mt-16 bg-white rounded-lg border border-gray-200 p-6">
             <Tabs defaultValue="description" className="w-full">
               <TabsList className="grid w-full grid-cols-3 mb-6">

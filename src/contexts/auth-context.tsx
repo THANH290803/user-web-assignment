@@ -1,22 +1,28 @@
-"use client"
+"use client";
 
-import { createContext, useContext, useReducer, ReactNode, useEffect } from "react"
-import axios from "axios"
-import toast from "react-hot-toast"
+import {
+  createContext,
+  useContext,
+  useReducer,
+  ReactNode,
+  useEffect,
+} from "react";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 interface User {
-  id: number
-  username: string
-  email: string
-  phoneNumber?: string
-  address?: string
-  avatar?: string
+  id: number;
+  username: string;
+  email: string;
+  phoneNumber?: string;
+  address?: string;
+  avatar?: string;
 }
 
 interface AuthState {
-  user: User | null
-  isLoading: boolean
-  isAuthenticated: boolean
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
 }
 
 type AuthAction =
@@ -25,33 +31,47 @@ type AuthAction =
   | { type: "LOGIN_FAILURE" }
   | { type: "LOGOUT" }
   | { type: "UPDATE_PROFILE"; payload: Partial<User> }
-  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_LOADING"; payload: boolean };
 
 const AuthContext = createContext<{
-  state: AuthState
-  dispatch: React.Dispatch<AuthAction>
-  login: (email: string, password: string) => Promise<boolean>
-  register: (username: string, email: string, password: string, phone?: string, address?: string) => Promise<boolean>
-  logout: () => void
-  updateProfile: (data: Partial<User>) => void
-} | null>(null)
+  state: AuthState;
+  dispatch: React.Dispatch<AuthAction>;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (
+    username: string,
+    email: string,
+    password: string,
+    phone?: string,
+    address?: string,
+  ) => Promise<boolean>;
+  logout: () => void;
+  updateProfile: (data: Partial<User>) => void;
+} | null>(null);
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case "LOGIN_START":
-      return { ...state, isLoading: true }
+      return { ...state, isLoading: true };
     case "LOGIN_SUCCESS":
-      return { ...state, user: action.payload, isLoading: false, isAuthenticated: true }
+      return {
+        ...state,
+        user: action.payload,
+        isLoading: false,
+        isAuthenticated: true,
+      };
     case "LOGIN_FAILURE":
-      return { ...state, user: null, isLoading: false, isAuthenticated: false }
+      return { ...state, user: null, isLoading: false, isAuthenticated: false };
     case "LOGOUT":
-      return { ...state, user: null, isAuthenticated: false, isLoading: false }
+      return { ...state, user: null, isAuthenticated: false, isLoading: false };
     case "UPDATE_PROFILE":
-      return { ...state, user: state.user ? { ...state.user, ...action.payload } : null }
+      return {
+        ...state,
+        user: state.user ? { ...state.user, ...action.payload } : null,
+      };
     case "SET_LOADING":
-      return { ...state, isLoading: action.payload }
+      return { ...state, isLoading: action.payload };
     default:
-      return state
+      return state;
   }
 }
 
@@ -60,39 +80,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: null,
     isLoading: true,
     isAuthenticated: false,
-  })
+  });
 
   useEffect(() => {
-    const userData = localStorage.getItem("user")
+    const userData = localStorage.getItem("user");
     if (userData) {
       try {
-        const user = JSON.parse(userData)
-        dispatch({ type: "LOGIN_SUCCESS", payload: user })
+        const user = JSON.parse(userData);
+        dispatch({ type: "LOGIN_SUCCESS", payload: user });
       } catch {
-        localStorage.removeItem("user")
+        localStorage.removeItem("user");
       }
     }
-    dispatch({ type: "SET_LOADING", payload: false })
-  }, [])
+    dispatch({ type: "SET_LOADING", payload: false });
+  }, []);
 
-  const login = async (username: string, password?: string): Promise<boolean> => {
-    dispatch({ type: "LOGIN_START" })
+  const login = async (
+    username: string,
+    password?: string,
+  ): Promise<boolean> => {
+    dispatch({ type: "LOGIN_START" });
 
     try {
       const res = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-      })
+      });
 
       if (!res.ok) {
-        dispatch({ type: "LOGIN_FAILURE" })
-        return false
+        dispatch({ type: "LOGIN_FAILURE" });
+        return false;
       }
 
-      const data = await res.json()
+      const data = await res.json();
 
-      const result = data.result
+      const result = data.result;
 
       const user: User = {
         id: result.user.id,
@@ -101,29 +124,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phoneNumber: result.user.phoneNumber,
         address: result.user.address,
         avatar: result.user.avatar || "/placeholder.svg",
-      }
+      };
 
-      localStorage.setItem("token", result.token)
-      localStorage.setItem("user", JSON.stringify(user))
+      localStorage.setItem("token", result.token);
+      localStorage.setItem("user", JSON.stringify(user));
 
-      dispatch({ type: "LOGIN_SUCCESS", payload: user })
+      dispatch({ type: "LOGIN_SUCCESS", payload: user });
 
-      return true
+      return true;
     } catch (error) {
-      console.error(error)
-      dispatch({ type: "LOGIN_FAILURE" })
-      return false
+      console.error(error);
+      dispatch({ type: "LOGIN_FAILURE" });
+      return false;
     }
-  }
+  };
 
   const register = async (
     username: string,
     email: string,
     password: string,
     phone?: string,
-    address?: string
+    address?: string,
   ): Promise<boolean> => {
-    dispatch({ type: "SET_LOADING", payload: true })
+    dispatch({ type: "SET_LOADING", payload: true });
     try {
       const res = await axios.post("http://localhost:8080/api/auth/register", {
         username: username,
@@ -132,39 +155,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phoneNumber: phone || "",
         address: address || "",
         roleId: 3, // mặc định role khách hàng
-      })
+      });
 
       if (res.status === 200 || res.status === 201) {
-        toast.success("Đăng ký thành công! Vui lòng đăng nhập.", { duration: 5000 })
-        dispatch({ type: "SET_LOADING", payload: false })
-        return true
+        toast.success("Đăng ký thành công! Vui lòng đăng nhập.", {
+          duration: 5000,
+        });
+        dispatch({ type: "SET_LOADING", payload: false });
+        return true;
       }
 
-      toast.error("Đăng ký thất bại", { duration: 5000 })
-      dispatch({ type: "SET_LOADING", payload: false })
-      return false
+      toast.error("Đăng ký thất bại", { duration: 5000 });
+      dispatch({ type: "SET_LOADING", payload: false });
+      return false;
     } catch (err) {
-      toast.error("Đăng ký thất bại. Vui lòng thử lại", { duration: 5000 })
-      dispatch({ type: "SET_LOADING", payload: false })
-      return false
+      toast.error("Đăng ký thất bại. Vui lòng thử lại", { duration: 5000 });
+      dispatch({ type: "SET_LOADING", payload: false });
+      return false;
     }
-  }
+  };
 
   const logout = () => {
-    localStorage.removeItem("user")
-    localStorage.removeItem("token")
-    dispatch({ type: "LOGOUT" })
-  }
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    localStorage.removeItem("cart");
+
+    dispatch({ type: "LOGOUT" });
+
+    window.location.href = "/";
+  };
 
   const updateProfile = async (data: Partial<User>) => {
-    if (!state.user) return
+    if (!state.user) return;
 
     try {
-      const token = localStorage.getItem("token")
-      if (!token) throw new Error("No token")
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token");
 
       const res = await axios.patch(
-        `http://localhost:8080/api/users/${state.user.id}`,
+        `http://localhost:8080/api/accounts/${state.user.id}`,
         {
           username: data.username,
           email: data.email,
@@ -175,30 +204,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
-      )
+        },
+      );
 
       // API trả user mới
       const updatedUser: User = {
         ...state.user,
         ...res.data,
-      }
+      };
 
-      localStorage.setItem("user", JSON.stringify(updatedUser))
-      dispatch({ type: "UPDATE_PROFILE", payload: updatedUser })
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      dispatch({ type: "UPDATE_PROFILE", payload: updatedUser });
 
-      toast.success("Cập nhật thông tin thành công!")
+      toast.success("Cập nhật thông tin thành công!");
     } catch (error) {
-      console.error(error)
-      toast.error("Cập nhật thông tin thất bại")
+      console.error(error);
+      toast.error("Cập nhật thông tin thất bại");
     }
-  }
+  };
 
-  return <AuthContext.Provider value={{ state, dispatch, login, register, logout, updateProfile }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider
+      value={{ state, dispatch, login, register, logout, updateProfile }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) throw new Error("useAuth must be used within an AuthProvider")
-  return context
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
+  return context;
 }
